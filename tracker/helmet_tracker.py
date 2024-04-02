@@ -68,7 +68,7 @@ def main():
 
     # Use a pre-trained model and replace the classifier with a new one
     model = fasterrcnn_resnet50_fpn(pretrained=True)
-    num_classes = 4  # 4 classes + background
+    num_classes = 5  # 4 classes + background
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, num_classes)
 
