@@ -15,7 +15,10 @@ app.add_middleware(
 
 
  
-predictor = HelmetPredictor()
+predictor = HelmetPredictor('tracker/model_weights.pth')
+storage_client = storage.Client.from_service_account_json('path/to/your/service-account-file.json')
+bucket_name = 'your-bucket-name'
+
 
 @app.post("/files/")
 async def create_file(file: Annotated[bytes, File()]):
@@ -30,6 +33,13 @@ async def create_upload_file(file: UploadFile):
         return {"message": "No upload file sent"}
     else:
         return {"filename": file.filename}
+
+
+def upload_image_to_gcs(image_byte_arr, filename):
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(filename)
+    blob.upload_from_string(image_byte_arr, content_type='image/png')
+
 
 @app.post("/predictor")
 async def predict_file(file: UploadFile):
