@@ -1,48 +1,22 @@
 from fastapi import FastAPI, File, UploadFile
 from typing_extensions import Annotated
 from typing import Union
+from starlette.responses import FileResponse
+from starlette.middleware.cors import CORSMiddleware
+from predictor import HelmetPredictor
+from PIL import Image
+import io
+from fastapi.responses import StreamingResponse
+
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+)
+
+
  
-db = [
-    {"student_id" : "20241",
-     "name": "Tri"},
-     {"student_id" : "20242",
-     "name": "Carter"},
-     {"student_id" : "20243",
-     "name": "Kush"},
- 
-]
- 
-@app.get("/")
-async def root():
-    return "Carter redneck"
- 
-@app.get("/student_db/{student_id}")
-async def get_student(student_id:str):
-    for record in db:
-        if record["student_id"] == student_id:
-            return record
-        
-@app.post("/student_db")
-async def create_student(student_id:str, name):
-    record = {
-        "student_id": student_id,
-        "name": name
-    }
-    db.append(record)
- 
-@app.put("/student_db/{student_id}")
-async def update_student(student_id:str, name):
-    for record in db:
-        if record["student_id"] == student_id:
-            record["name"] = name
- 
-@app.delete("/student_db/{student_id}")
-async def update_student(student_id:str, name):
-    for record in db:
-        if record["student_id"] == student_id:
-            db.remove(record)
- 
+predictor = HelmetPredictor()
+
 @app.post("/files/")
 async def create_file(file: Annotated[bytes, File()]):
     if not file:
@@ -56,3 +30,24 @@ async def create_upload_file(file: UploadFile):
         return {"message": "No upload file sent"}
     else:
         return {"filename": file.filename}
+
+@app.post("/predictor")
+async def predict_file(file: UploadFile):
+    # if not file:
+    #     return {"message": "No upload file sent"}
+    # else:
+    #     return {"filename": file.filename}
+    
+    image_data = await file.read()
+    image = Image.open(io.BytesIO(image_data))
+
+    # Predict and draw boxes on the image
+    image_with_boxes = predictor.predict_and_draw(image)
+
+    # Convert PIL image to byte stream in PNG format
+    img_byte_arr = io.BytesIO()
+    image_with_boxes.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+
+    # Return the image in the response
+    return StreamingResponse(io.BytesIO(img_byte_arr), media_type="image/png")
