@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, HTTPException
 from typing_extensions import Annotated
 from typing import Union
 from starlette.responses import FileResponse
@@ -7,6 +7,9 @@ from predictor import HelmetPredictor
 from PIL import Image
 import io
 from fastapi.responses import StreamingResponse
+import logging
+from io import BytesIO
+
 
 app = FastAPI()
 app.add_middleware(
@@ -16,8 +19,8 @@ app.add_middleware(
 
  
 predictor = HelmetPredictor('tracker/model_weights.pth')
-storage_client = storage.Client.from_service_account_json('path/to/your/service-account-file.json')
-bucket_name = 'your-bucket-name'
+#storage_client = storage.Client.from_service_account_json('path/to/your/service-account-file.json')
+#bucket_name = 'your-bucket-name'
 
 
 @app.post("/files/")
@@ -41,23 +44,28 @@ def upload_image_to_gcs(image_byte_arr, filename):
     blob.upload_from_string(image_byte_arr, content_type='image/png')
 
 
+    
 @app.post("/predictor")
 async def predict_file(file: UploadFile):
-    # if not file:
-    #     return {"message": "No upload file sent"}
-    # else:
-    #     return {"filename": file.filename}
-    
-    image_data = await file.read()
-    image = Image.open(io.BytesIO(image_data))
+    if not file:
+        raise HTTPException(status_code=400, detail="No upload file sent")
 
-    # Predict and draw boxes on the image
-    image_with_boxes = predictor.predict_and_draw(image)
+    try:
+        image_data = await file.read()
+        image_filename = "processed"+file.filename
+        if not image_data:
+            logging.error("No data read from file")
+            raise HTTPException(status_code=400, detail="No data read from file")
 
-    # Convert PIL image to byte stream in PNG format
-    img_byte_arr = io.BytesIO()
-    image_with_boxes.save(img_byte_arr, format='PNG')
-    img_byte_arr = img_byte_arr.getvalue()
+        image_stream = BytesIO(image_data)
+        image = Image.open(image_stream)
+        image_draw = predictor.predict_and_draw(image_stream)
+        image_draw.save(image_filename)
+        def iter_file():
+            with open(image_filename, mode="rb") as file_like:
+                yield from file_like
 
-    # Return the image in the response
-    return StreamingResponse(io.BytesIO(img_byte_arr), media_type="image/png")
+        return StreamingResponse(iter_file(), media_type="image/png")
+    except Exception as e:
+        logging.error(f"Error processing image: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

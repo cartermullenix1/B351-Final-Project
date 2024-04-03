@@ -10,7 +10,7 @@ class HelmetPredictor:
         self.model.load_state_dict(torch.load(model_path, map_location=self.device))
         self.model = self.model.to(self.device)
         self.model.eval()
-        self.class_names = {0: 'Background', 1: 'Without Helmet', 2: 'Helmet', 3: 'NumberPlate', 4: 'Rider'}
+        self.class_names =  {0: 'WithHelmet', 1: 'Without Helmet', 2: 'Unknown', 3: 'NumberPlate', 4: 'Rider'}
 
     def transform_image(self, image_path):
         image = Image.open(image_path).convert('RGB')
@@ -48,14 +48,14 @@ class HelmetPredictor:
         return self.draw_boxes(image, predictions, threshold)
 
 # Usage example
-model_path = 'tracker/model_weights.pth'
-detector = HelmetPredictor(model_path)
+# model_path = 'tracker/model_weights.pth'
+# detector = HelmetPredictor(model_path)
 
-image_path = 'archive/val/images/new26.jpg'
-image_with_boxes = detector.predict_and_draw(image_path)
+# image_path = 'archive/val/images/new26.jpg'
+# image_with_boxes = detector.predict_and_draw(image_path)
 
-# Display the image
-image_with_boxes.show()
+# # Display the image
+# image_with_boxes.show()
 
-# Or save the image
-image_with_boxes.save('image_with_boxes.jpg')
+# # Or save the image
+# image_with_boxes.save('image_with_boxes.jpg')
