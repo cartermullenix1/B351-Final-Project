@@ -19,6 +19,8 @@ app.add_middleware(
 
  
 predictor = HelmetPredictor('tracker/model_weights.pth')
+
+#predictor = 
 #storage_client = storage.Client.from_service_account_json('path/to/your/service-account-file.json')
 #bucket_name = 'your-bucket-name'
 
