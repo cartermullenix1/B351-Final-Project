@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
 from typing_extensions import Annotated
 from typing import Union
 from starlette.responses import FileResponse
@@ -10,13 +10,42 @@ from fastapi.responses import StreamingResponse
 import logging
 from io import BytesIO
 
+from core.config import settings
+from db.session import engine
+from db.base_class import Base
+from db.session import SessionLocal
+from sqlalchemy.orm import Session
+from db.base_class import ImageData, LicensePlateData
+
+def create_image_data(db: Session, filename: str, image_size: int):
+    db_image = ImageData(filename=filename, image_size=image_size)
+    db.add(db_image)
+    db.commit()
+    db.refresh(db_image)
+    return db_image
+
+def create_tables():         
+	Base.metadata.create_all(bind=engine)
+
+def create_license_plate_data(db: Session, image_name: str, plate_text: str) -> LicensePlateData:
+    license_plate_data = LicensePlateData(image_name=image_name, plate_text=plate_text)
+    db.add(license_plate_data)
+    db.commit()
+    db.refresh(license_plate_data)
+    return license_plate_data
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
+create_tables()
 
-
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
  
 predictor = HelmetPredictor('tracker/model_weights.pth')
 
@@ -40,15 +69,11 @@ async def create_upload_file(file: UploadFile):
         return {"filename": file.filename}
 
 
-def upload_image_to_gcs(image_byte_arr, filename):
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(filename)
-    blob.upload_from_string(image_byte_arr, content_type='image/png')
 
 
     
 @app.post("/predictor")
-async def predict_file(file: UploadFile):
+async def predict_file(file: UploadFile, db: Session = Depends(get_db)):
     if not file:
         raise HTTPException(status_code=400, detail="No upload file sent")
 
@@ -66,6 +91,9 @@ async def predict_file(file: UploadFile):
         def iter_file():
             with open(image_filename, mode="rb") as file_like:
                 yield from file_like
+
+        license_plate_text = "AJJJING"
+        create_license_plate_data(db, image_filename, license_plate_text)
 
         return StreamingResponse(iter_file(), media_type="image/png")
     except Exception as e:
