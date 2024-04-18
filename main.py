@@ -16,7 +16,9 @@ from db.base_class import Base
 from db.session import SessionLocal
 from sqlalchemy.orm import Session
 from db.base_class import ImageData, LicensePlateData
-
+import cv2
+import logging
+import numpy as np
 def create_image_data(db: Session, filename: str, image_size: int):
     db_image = ImageData(filename=filename, image_size=image_size)
     db.add(db_image)
@@ -47,8 +49,8 @@ def get_db():
     finally:
         db.close()
  
-predictor = HelmetPredictor('tracker/model_weights.pth')
-
+#predictor = HelmetPredictor('tracker/model_weights.pth')
+predictor = HelmetPredictor("model/runs/detect/yolov8n_custom3/weights/best.pt", model_type="yolov8")
 #predictor = 
 #storage_client = storage.Client.from_service_account_json('path/to/your/service-account-file.json')
 #bucket_name = 'your-bucket-name'
@@ -86,13 +88,16 @@ async def predict_file(file: UploadFile, db: Session = Depends(get_db)):
 
         image_stream = BytesIO(image_data)
         image = Image.open(image_stream)
-        image_draw = predictor.predict_and_draw(image_stream)
-        image_draw.save(image_filename)
+        image_draw, license_plate_text = predictor.draw_boxes(image)
+        logging.info(f"License plate: {license_plate_text}")
+        numpy_image = np.array(image_draw)
+        cv2.imshow("image", image_draw)
+        cv2.imwrite(image_filename, numpy_image)
         def iter_file():
             with open(image_filename, mode="rb") as file_like:
                 yield from file_like
 
-        license_plate_text = "AJJJING"
+        #license_plate_text = "AJJJING"
         create_license_plate_data(db, image_filename, license_plate_text)
 
         return StreamingResponse(iter_file(), media_type="image/png")

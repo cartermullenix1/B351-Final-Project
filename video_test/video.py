@@ -182,34 +182,30 @@ while cap.isOpened():
                 cv2.imshow("threshold", plate_treshold)
                 cv2.imshow("threshold", plate)
                 cv2.waitKey(0)
-                # OCR
-                np_text, np_score = read_license_plate(plate_treshold)
-                license_text = f"{np_text}"
-                cv2.putText(frame, license_text, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            else:
+                detections = reader.readtext(plate_gray)
+                print("Detection", detections)
+                
+                License_text = ""
+                for detection in detections:
+                    bbox, text, confidence = detection
+                    text_x1, text_y1, text_x2, text_y2 = bbox
+                    
+                
+                    License_text += text
+                print(License_text)
+                #text = f"{detection[0][1]} {detection[0][2] * 100:.2f}%"
+                img = img.copy()
+                print("X1", x1)
+                print("Y1", y1)
 
-            # Prepare the text for the label and score
-                text = f"{label}: {score:.2f}"
-                (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-
-                cv2.putText(frame, text, (int(x1), int(y1 - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-
-            # plate_x1, plate_y1, plate_x2, plate_y2, plate_score, _ = license_plate
-            #      # crop plate from region of interest
-            # plate = frame[int(plate_y1):int(plate_y2), int(plate_x1):int(plate_x2)]
-            # # de-colorize
-            # plate_gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
-            # # posterize
-            # _, plate_treshold = cv2.threshold(plate_gray, 64, 255, cv2.THRESH_BINARY_INV)
+                cv2.putText(frame, License_text, (int(x1), int(y1-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
+                # display the license plate and the output image
+                
+                cv2.imshow('Image', img)
+                #img.save("License detection")
+                cv2.waitKey(0)
             
-            # # OCR
-            # np_text, np_score = read_license_plate(plate_treshold)
-            # # if plate could be read write results
-            
-            # license_text = f"{np_text}"
-            # cv2.putText(frame, license_text, (int(plate_x1), int(plate_y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
        
        
         

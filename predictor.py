@@ -49,7 +49,7 @@ def format_license(text):
 
     return license_plate_
 
-reader = easyocr.Reader(['en'], gpu=False)
+reader = easyocr.Reader(['en'], gpu=True)
 
 def read_license_plate(license_plate_crop):
     detections = reader.readtext(license_plate_crop)
@@ -80,7 +80,7 @@ class HelmetPredictor:
         else:
             raise ValueError("Unsupported model type: " + model_type)
 
-        self.model.to(self.device).eval()
+        #self.model.to(self.device).eval()
         self.class_names = {0: 'WithHelmet', 1: 'Without Helmet', 2: 'Rider', 3: 'NumberPlate', 4: 'Unknown'}
 
     def transform_image(self, image):
@@ -98,44 +98,6 @@ class HelmetPredictor:
             output = self.model(image_tensor.to(self.device))
         return output
 
-    # def draw_boxes(self, image, predictions, threshold=0.5):
-    #     draw = ImageDraw.Draw(image)
-    #     font = ImageFont.load_default()
-        
-    #     for element in range(len(predictions[0]['boxes'])):
-    #         score = predictions[0]['scores'][element] if 'scores' in predictions[0] else predictions[0]['confidences'][element]
-    #         if score > threshold:
-    #             box = predictions[0]['boxes'][element].tolist() if 'boxes' in predictions[0] else predictions[0]['xyxy'][element].tolist()
-    #             label_idx = predictions[0]['labels'][element].item() if 'labels' in predictions[0] else predictions[0]['classes'][element].item()
-    #             label = self.class_names.get(label_idx, 'Unknown')
-    #             print("box", box)
-    #             x1, y1, x2, y2 = box
-    #             if label_idx == 3:
-                    
-    #                 plate = frame[int(y1):int(y2), int(x1):int(x2)]
-
-    #                     # de-colorize
-    #                 plate_gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
-    #                 # posterize
-    #                 _, plate_treshold = cv2.threshold(plate_gray, 64, 255, cv2.THRESH_BINARY_INV)
-
-    #                 cv2.imshow("threshold", plate_treshold)
-    #                 cv2.imshow("threshold", plate)
-    #                 cv2.waitKey(0)
-    #                 # OCR
-    #                 np_text, np_score = read_license_plate(plate_treshold)
-    #                 license_text = f"{np_text}"
-    #                 cv2.putText(frame, license_text, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-
-    #             draw.rectangle(box, outline='red', width=3)
-    #             text = f"{label}: {score:.2f}"
-    #             text_size = ImageFont.truetype('arial.ttf', 16) #draw.textsize(text, font=font)
-    #             text_background = [box[0], box[1], box[0] + text_size[0], box[1] + text_size[1]]
-    #             draw.rectangle(text_background, fill='red')
-    #             draw.text((box[0], box[1]), text, fill='white', font=font)
-
-    #     return image
 
     def textsize(text, font):
         im = Image.new(mode="P", size=(0, 0))
@@ -143,83 +105,58 @@ class HelmetPredictor:
         _, _, width, height = draw.textbbox((0, 0), text=text, font=font)
         return width, height
     
-    def draw_boxes(self, image, predictions, threshold=0.5):
-        draw = ImageDraw.Draw(image)
-        font = ImageFont.load_default()
+    def draw_boxes(self, img, threshold=0.5):
 
-        for element in range(len(predictions[0]['boxes'])):
-            score = predictions[0]['scores'][element] if 'scores' in predictions[0] else predictions[0]['confidences'][element]
-            if score > threshold:
-                box = predictions[0]['boxes'][element].tolist()
-                label_idx = predictions[0]['labels'][element].item()
-                label = self.class_names.get(label_idx, 'Unknown')
-                if label_idx == 3:  # Assuming '3' is the label for license plates
-                    # Extracting the coordinates for the bounding box
-                    x1, y1, x2, y2 = box
-                    # Convert PIL Image to OpenCV format
-                    frame = np.array(image)
-                    # Extract the license plate region from the frame
-                    plate = frame[int(y1):int(y2), int(x1):int(x2)]
+        #img = cv2.imread(image_path)
+        img = np.array(img)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        predictions = self.model.predict(img)[0]
+        for prediction in predictions.boxes.data.tolist():
+            x1, y1, x2, y2, score, class_id = prediction
+            cv2.rectangle(img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+            label = self.class_names[int(class_id)]
+            
+            if class_id == 3:
+                plate = img[int(y1):int(y2), int(x1):int(x2)]
 
-                    # Convert to grayscale
-                    plate_gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
-                    # Apply threshold to get binary image
-                    _, plate_threshold = cv2.threshold(plate_gray, 64, 255, cv2.THRESH_BINARY_INV)
+                plate_gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
+                # posterize
+                _, plate_treshold = cv2.threshold(plate_gray, 64, 255, cv2.THRESH_BINARY_INV)
 
-                    np_text, np_score = read_license_plate(plate_threshold)
-                    license_text = f"{np_text}"
-                    print("license", license_text)
+
+                reader = easyocr.Reader(['en'], gpu=True)
+                detections = reader.readtext(plate_gray)
+                print("Detection", detections)
                 
+                License_text = ""
+                for detection in detections:
+                    bbox, text, confidence = detection
+                    text_x1, text_y1, text_x2, text_y2 = bbox
+                    print("Text x1", text_x1)
+                    
+            
+                    License_text += text
+                print(License_text)
+                img = img.copy()
+                print("X1", x1)
+                print("Y1", y1)
 
-                    # Convert OpenCV format back to PIL for consistency in drawing
-                    image = Image.fromarray(frame.astype('uint8'), 'RGB')
-                    draw = ImageDraw.Draw(image)
+                cv2.putText(img, License_text, (int(x1), int(y1-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
+                # display the license plate and the output image
+            else:
+                cv2.putText(img, label, (int(x1), int(y1-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
+        return img, License_text
+    
+    
+    
+    def predict_and_draw(self, image, threshold=0.5):
+        image = Image.open(image).convert('RGB')
+       # predictions = self.predict(image)
 
-                # Draw rectangle around the detected license plate
-                # draw.rectangle([x1, y1, x2, y2], outline='red', width=3)
-                # label = self.class_names.get(label_idx, 'Unknown')
-                # text = f"{label}: {score:.2f}"
-                # text_size = draw.textsize(text, font=font)
-                # text_background = [x1, y1 - text_size[1], x1 + text_size[0], y1]
-                # draw.rectangle(text_background, fill='red')
-                # draw.text((x1, y1 - text_size[1]), text, fill='white', font=font)
-                draw.rectangle(box, outline='red', width=3)
-                text = f"{label}: {score:.2f}"
-                
-                text_size = draw.textsize(text, font=font)
-                text_background = [box[0], box[1], box[0] + text_size[0], box[1] + text_size[1]]
-                draw.rectangle(text_background, fill='red')
-                draw.text((box[0], box[1]), text, fill='white', font=font)
-
-        return image
-
-    def predict_and_draw(self, image_path, threshold=0.5):
-        image = Image.open(image_path).convert('RGB')
-        predictions = self.predict(image)
+        predictions = self.model.predict(image)
         return self.draw_boxes(image, predictions, threshold)
     
-    # def predict_and_draw_frame(self, frame, threshold=0.2):
-    #     # Convert frame to PIL image
-    #     pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-    #     font = ImageFont.load_default()
-    #     # Predict
-    #     predictions = self.predict(pil_image)
-        
-    #     # Draw boxes on the frame
-    #     for element in range(len(predictions[0]['boxes'])):
-    #         score = predictions[0]['scores'][element] if 'scores' in predictions[0] else predictions[0]['confidences'][element]
-    #         if score > threshold:
-    #             box = predictions[0]['boxes'][element].tolist() if 'boxes' in predictions[0] else predictions[0]['xyxy'][element].tolist()
-    #             label_idx = predictions[0]['labels'][element].item() if 'labels' in predictions[0] else predictions[0]['classes'][element].item()
-    #             label = self.class_names.get(label_idx, 'Unknown')
-    #             # Draw rectangle on the frame
-    #             cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
-    #             text = f"{label}: {score:.2f}"
-    #             text_size = cv2.textsize(text, font=font)
-    #             text_background = [box[0], box[1], box[0] + text_size[0], box[1] + text_size[1]]
-    #             cv2.rectangle(text_background, fill='red')
-    #             cv2.text((box[0], box[1]), text, fill='white', font=font)
-    #     return frame
+   
     def predict_and_draw_frame(self, frame, threshold=0.2):
     # Convert frame to PIL image for prediction
         pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -250,17 +187,19 @@ class HelmetPredictor:
 
 
         return frame
+#
 
+#Usage example
+#model_path = 'tracker/model_weights.pth'
 
-# Usage example
-# model_path = 'tracker/model_weights.pth'
-# detector = HelmetPredictor(model_path)
+#detector = HelmetPredictor(model_path)
+predictor = HelmetPredictor("model/runs/detect/yolov8n_custom3/weights/best.pt", model_type="yolov8")
+image_path = 'archive/train/images/new10.jpg'
+image = Image.open(image_path)
+image_with_boxes, license = predictor.draw_boxes(image)
 
-# image_path = 'archive/train/images/new25.jpg'
-# image_with_boxes = detector.predict_and_draw(image_path)
-
-# # Display the image
-# image_with_boxes.show()
-
-# # Or save the image
-# image_with_boxes.save('image_with_boxes.jpg')
+# Display the image
+cv2.imshow("Image", image_with_boxes)
+cv2.imwrite('image_with_boxes.jpg', image_with_boxes)
+#Or save the image
+#image_with_boxes.save('image_with_boxes.jpg')
