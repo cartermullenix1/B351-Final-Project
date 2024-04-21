@@ -9,6 +9,17 @@ from predictor import HelmetPredictor
 import easyocr
 import string
 
+
+from core.config import settings
+from db.session import engine
+from db.base_class import Base
+from db.session import SessionLocal
+from sqlalchemy.orm import Session
+from db.base_class import ImageData, LicensePlateData
+import cv2
+import logging
+import numpy as np
+
 # Load the model
 coco_model = YOLO('yolov8n.pt')
 model = YOLO('../model/runs/detect/yolov8n_custom4/weights/best.pt')
@@ -95,25 +106,28 @@ def read_license_plate(license_plate_crop):
 
     return None, None
 
+# def create_tables():         
+# 	Base.metadata.create_all(bind=engine)
 
+# def create_license_plate_data(db: Session, image_name: str, plate_text: str) -> LicensePlateData:
+#     license_plate_data = LicensePlateData(image_name=image_name, plate_text=plate_text)
+#     db.add(license_plate_data)
+#     db.commit()
+#     db.refresh(license_plate_data)
+#     return license_plate_data
+
+# create_tables()
+
+# def get_db():
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
 
 while cap.isOpened():
     ret, frame = cap.read()
-    if ret:
-        # Vehicle detection and drawing borders
-        # detections = coco_model(frame)[0]
-        # for detection in detections.boxes.data.tolist():
-        #     x1, y1, x2, y2, score, class_id = detection
-        #     if int(class_id) in [2, 3, 5, 7]:  # Assuming these are the vehicle class IDs
-        #         cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-        #         label = class_names_vehicles[int(class_id)]  # Get the label from class ID
-        
-        #         label_text = f"{label}: {score:.2f}"
-        #         cv2.putText(frame, label_text, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-
-
-
+    if ret:       
         detections = coco_model.track(frame, persist=True)[0]
         for detection in detections.boxes.data.tolist():
             x1, y1, x2, y2, track_id, score, class_id = detection
@@ -123,46 +137,6 @@ while cap.isOpened():
         
                 label_text = f"{label}: {score:.2f}"
                 cv2.putText(frame, label_text, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-                # vehicle_bounding_boxes = []
-                # vehicle_bounding_boxes.append([x1, y1, x2, y2, track_id, score])
-                # for bbox in vehicle_bounding_boxes:
-                #     print(bbox)
-
-                # roi = frame[int(y1):int(y2), int(x1):int(x2)]
-                
-                # # license plate detector for region of interest
-                # license_plates = model(roi)[0]
-                # # process license plate
-                # for license_plate in license_plates.boxes.data.tolist():
-                #     plate_x1, plate_y1, plate_x2, plate_y2, plate_score, _ = license_plate
-                #     # crop plate from region of interest
-                #     plate = roi[int(plate_y1):int(plate_y2), int(plate_x1):int(plate_x2)]
-                #     # de-colorize
-                #     plate_gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
-                #     # posterize
-                #     _, plate_treshold = cv2.threshold(plate_gray, 64, 255, cv2.THRESH_BINARY_INV)
-                    
-                #     # OCR
-                #     np_text, np_score = read_license_plate(plate_treshold)
-                #     # if plate could be read write results
-                    
-                #     license_text = f"{np_text}"
-                #     cv2.putText(frame, license_text, (int(plate_x1), int(plate_y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-                        # if np_text is not None:
-                        #     results[frame_number][track_id] = {
-                        #         'car': {
-                        #             'bbox': [x1, y1, x2, y2],
-                        #             'bbox_score': score
-                        #         },
-                        #         'license_plate': {
-                        #             'bbox': [plate_x1, plate_y1, plate_x2, plate_y2],
-                        #             'bbox_score': plate_score,
-                        #             'number': np_text,
-                        #             'text_score': np_score
-                        #         }
-                        #     }
 
         # License plate detection
         license_plates = model(frame)[0]
@@ -174,14 +148,9 @@ while cap.isOpened():
             if class_id == 3:
                 plate = frame[int(y1):int(y2), int(x1):int(x2)]
 
-                        # de-colorize
                 plate_gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
                 # posterize
                 _, plate_treshold = cv2.threshold(plate_gray, 64, 255, cv2.THRESH_BINARY_INV)
-
-                cv2.imshow("threshold", plate_treshold)
-                cv2.imshow("threshold", plate)
-                cv2.waitKey(0)
 
                 detections = reader.readtext(plate_gray)
                 print("Detection", detections)
@@ -193,23 +162,16 @@ while cap.isOpened():
                     
                 
                     License_text += text
+                #db = get_db()
                 print(License_text)
-                #text = f"{detection[0][1]} {detection[0][2] * 100:.2f}%"
-                img = img.copy()
-                print("X1", x1)
-                print("Y1", y1)
+                #create_license_plate_data(db, "Image name", License_text)
 
+                
                 cv2.putText(frame, License_text, (int(x1), int(y1-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
                 # display the license plate and the output image
-                
-                cv2.imshow('Image', img)
-                #img.save("License detection")
-                cv2.waitKey(0)
-            
-       
-       
-        
+            else:
 
+                cv2.putText(frame, label, (int(x1), int(y1-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
         # Write the frame into the file 'output.avi'
         out.write(frame)
 

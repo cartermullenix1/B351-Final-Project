@@ -187,19 +187,18 @@ class HelmetPredictor:
 
 
         return frame
-#
 
 #Usage example
 #model_path = 'tracker/model_weights.pth'
 
 #detector = HelmetPredictor(model_path)
-predictor = HelmetPredictor("model/runs/detect/yolov8n_custom3/weights/best.pt", model_type="yolov8")
-image_path = 'archive/train/images/new10.jpg'
-image = Image.open(image_path)
-image_with_boxes, license = predictor.draw_boxes(image)
+# predictor = HelmetPredictor("model/runs/detect/yolov8n_custom3/weights/best.pt", model_type="yolov8")
+# image_path = 'archive/train/images/new10.jpg'
+# image = Image.open(image_path)
+# image_with_boxes, license = predictor.draw_boxes(image)
 
-# Display the image
-cv2.imshow("Image", image_with_boxes)
-cv2.imwrite('image_with_boxes.jpg', image_with_boxes)
+# # Display the image
+# cv2.imshow("Image", image_with_boxes)
+# cv2.imwrite('image_with_boxes.jpg', image_with_boxes)
 #Or save the image
 #image_with_boxes.save('image_with_boxes.jpg')

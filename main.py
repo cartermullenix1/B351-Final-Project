@@ -19,6 +19,8 @@ from db.base_class import ImageData, LicensePlateData
 import cv2
 import logging
 import numpy as np
+
+from easyocr import Reader
 def create_image_data(db: Session, filename: str, image_size: int):
     db_image = ImageData(filename=filename, image_size=image_size)
     db.add(db_image)
@@ -89,6 +91,8 @@ async def predict_file(file: UploadFile, db: Session = Depends(get_db)):
         image_stream = BytesIO(image_data)
         image = Image.open(image_stream)
         image_draw, license_plate_text = predictor.draw_boxes(image)
+
+        
         logging.info(f"License plate: {license_plate_text}")
         numpy_image = np.array(image_draw)
         cv2.imshow("image", image_draw)
