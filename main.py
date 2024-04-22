@@ -52,7 +52,7 @@ def get_db():
         db.close()
  
 #predictor = HelmetPredictor('tracker/model_weights.pth')
-predictor = HelmetPredictor("model/runs/detect/yolov8n_custom3/weights/best.pt", model_type="yolov8")
+predictor = HelmetPredictor("model/runs/detect/yolov8n_custom4/weights/best.pt", model_type="yolov8")
 #predictor = 
 #storage_client = storage.Client.from_service_account_json('path/to/your/service-account-file.json')
 #bucket_name = 'your-bucket-name'
@@ -74,14 +74,17 @@ async def create_upload_file(file: UploadFile):
 
 
 
+# This is the "POST" use for prediction that we need to insert an image and the model 
+# will predict the outcome
 
-    
+# Load the model predictor and try to predict the outcome
 @app.post("/predictor")
 async def predict_file(file: UploadFile, db: Session = Depends(get_db)):
     if not file:
         raise HTTPException(status_code=400, detail="No upload file sent")
 
     try:
+        # This is tru
         image_data = await file.read()
         image_filename = "processed"+file.filename
         if not image_data:
@@ -90,6 +93,7 @@ async def predict_file(file: UploadFile, db: Session = Depends(get_db)):
 
         image_stream = BytesIO(image_data)
         image = Image.open(image_stream)
+        # License text is trying to predict the image and also the license plate text
         image_draw, license_plate_text = predictor.draw_boxes(image)
 
         
@@ -100,7 +104,7 @@ async def predict_file(file: UploadFile, db: Session = Depends(get_db)):
         def iter_file():
             with open(image_filename, mode="rb") as file_like:
                 yield from file_like
-
+        # This will try to send the image file name and license plate text to the database
         #license_plate_text = "AJJJING"
         create_license_plate_data(db, image_filename, license_plate_text)
 

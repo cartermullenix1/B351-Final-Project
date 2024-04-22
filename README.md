@@ -1,6 +1,16 @@
 # B351-Final-Project
 
+# Install the dependencies
+
+"""pip install -r requirements.txt"""
+
+
+# Install the Postgresql database
+
+"""brew install postgresql@15"""
+"""brew services start postgresql@15"""
 # Running the FAST-API
+
 
 """ uvicorn main:app"""
 

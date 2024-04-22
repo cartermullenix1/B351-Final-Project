@@ -48,64 +48,8 @@ class_names_vehicles = {2: 'car',
  6: 'train',
  7: 'truck'}
 
-dict_char_to_int = {'O': '0',
-                    'I': '1',
-                    'J': '3',
-                    'A': '4',
-                    'G': '6',
-                    'S': '5'}
-
-dict_int_to_char = {'0': 'O',
-                    '1': 'I',
-                    '3': 'J',
-                    '4': 'A',
-                    '6': 'G',
-                    '5': 'S'}
-def license_complies_format(text):
-    # True if the license plate complies with the format, False otherwise.
-    if len(text) != 7:
-        return False
-
-    if (text[0] in string.ascii_uppercase or text[0] in dict_int_to_char.keys()) and \
-       (text[1] in string.ascii_uppercase or text[1] in dict_int_to_char.keys()) and \
-       (text[2] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or text[2] in dict_char_to_int.keys()) and \
-       (text[3] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or text[3] in dict_char_to_int.keys()) and \
-       (text[4] in string.ascii_uppercase or text[4] in dict_int_to_char.keys()) and \
-       (text[5] in string.ascii_uppercase or text[5] in dict_int_to_char.keys()) and \
-       (text[6] in string.ascii_uppercase or text[6] in dict_int_to_char.keys()):
-        return True
-    else:
-        return False
-
-def format_license(text):
-    license_plate_ = ''
-    mapping = {0: dict_int_to_char, 1: dict_int_to_char, 4: dict_int_to_char, 5: dict_int_to_char, 6: dict_int_to_char,
-               2: dict_char_to_int, 3: dict_char_to_int}
-    for j in [0, 1, 2, 3, 4, 5, 6]:
-        if text[j] in mapping[j].keys():
-            license_plate_ += mapping[j][text[j]]
-        else:
-            license_plate_ += text[j]
-
-    return license_plate_
-
+# reader try to read the text
 reader = easyocr.Reader(['en'], gpu=False)
-
-def read_license_plate(license_plate_crop):
-    detections = reader.readtext(license_plate_crop)
-
-    for detection in detections:
-        bbox, text, score = detection
-
-        text = text.upper().replace(' ', '')
-
-        # verify that text is conform to a standard license plate
-        if license_complies_format(text):
-            # bring text into the default license plate format
-            return format_license(text), score
-
-    return None, None
-
 # def create_tables():         
 # 	Base.metadata.create_all(bind=engine)
 
@@ -128,6 +72,7 @@ def read_license_plate(license_plate_crop):
 while cap.isOpened():
     ret, frame = cap.read()
     if ret:       
+        # get the detections of all the vehicles from the street
         detections = coco_model.track(frame, persist=True)[0]
         for detection in detections.boxes.data.tolist():
             x1, y1, x2, y2, track_id, score, class_id = detection
@@ -138,20 +83,22 @@ while cap.isOpened():
                 label_text = f"{label}: {score:.2f}"
                 cv2.putText(frame, label_text, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-        # License plate detection
+        # Get all helmets detection and license plate
         license_plates = model(frame)[0]
         for license_plate in license_plates.boxes.data.tolist():
+            # Get the box of the object
             x1, y1, x2, y2, score, class_id = license_plate
             cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
             label = class_names[int(class_id)]
             
             if class_id == 3:
+                # Crop out the license plate
                 plate = frame[int(y1):int(y2), int(x1):int(x2)]
 
                 plate_gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
                 # posterize
                 _, plate_treshold = cv2.threshold(plate_gray, 64, 255, cv2.THRESH_BINARY_INV)
-
+                # Get the text recognition
                 detections = reader.readtext(plate_gray)
                 print("Detection", detections)
                 
@@ -165,14 +112,13 @@ while cap.isOpened():
                 #db = get_db()
                 print(License_text)
                 #create_license_plate_data(db, "Image name", License_text)
-
                 
                 cv2.putText(frame, License_text, (int(x1), int(y1-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
-                # display the license plate and the output image
+                
             else:
 
                 cv2.putText(frame, label, (int(x1), int(y1-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
-        # Write the frame into the file 'output.avi'
+        # Write the frame into the frame
         out.write(frame)
 
         # Display the resulting frame
