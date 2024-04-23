@@ -4,3 +4,6 @@ uvicorn
 SQLAlchemy
 psycopg2-binary 
 python-dotenv
+easyocr
+Pillow
+python-multipart

@@ -36,11 +36,29 @@ def create_license_plate_data(db: Session, image_name: str, plate_text: str) -> 
     db.add(license_plate_data)
     db.commit()
     db.refresh(license_plate_data)
+
+    license_plates = get_license_plate_data(db)
+    print("Record of License Plates")        
+    for plate in license_plates:
+        print(f"ID: {plate.id}, Image Name: {plate.image_name}, Plate Text: {plate.plate_text}")
+
     return license_plate_data
 
+def get_license_plate_data(db: Session):
+    return db.query(LicensePlateData).all()  # Retrieve all records
+
+
 app = FastAPI()
+# app.add_middleware(
+#     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+# )
+
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust as needed for security
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
 )
 create_tables()
 
@@ -99,7 +117,7 @@ async def predict_file(file: UploadFile, db: Session = Depends(get_db)):
         
         logging.info(f"License plate: {license_plate_text}")
         numpy_image = np.array(image_draw)
-        cv2.imshow("image", image_draw)
+        #cv2.imshow("image", image_draw)
         cv2.imwrite(image_filename, numpy_image)
         def iter_file():
             with open(image_filename, mode="rb") as file_like:

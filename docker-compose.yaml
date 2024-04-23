@@ -1,0 +1,24 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: tringuyen1803
+      POSTGRES_PASSWORD: supersecret
+      POSTGRES_DB: helmet_license_db
+    ports:
+      - "5432:5432"
+
+  fastapi:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_USER: tringuyen1803
+      POSTGRES_PASSWORD: supersecret
+      POSTGRES_SERVER: postgres  # Connect to the "postgres" service
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: helmet_license_db
+    depends_on:
+      - postgres

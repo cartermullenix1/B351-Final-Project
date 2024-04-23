@@ -22,3 +22,13 @@ On your web browser, go to http://127.0.0.1:8000/docs and add the image for pred
 """ cd video_test """
 """ python3 video.py"""
 
+
+# Using CI/CD
+
+Build ther Docker-compose
+
+"""dcoker-compose up --build"
+
+Stop the Docker-compose
+
+"""docker-compose down"

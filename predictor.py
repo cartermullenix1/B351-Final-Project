@@ -111,6 +111,7 @@ class HelmetPredictor:
         img = np.array(img)
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         predictions = self.model.predict(img)[0]
+        License_text = ""
         for prediction in predictions.boxes.data.tolist():
             x1, y1, x2, y2, score, class_id = prediction
             cv2.rectangle(img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
@@ -128,7 +129,7 @@ class HelmetPredictor:
                 detections = reader.readtext(plate_gray)
                 print("Detection", detections)
                 
-                License_text = ""
+                
                 for detection in detections:
                     bbox, text, confidence = detection
                     text_x1, text_y1, text_x2, text_y2 = bbox
@@ -136,7 +137,7 @@ class HelmetPredictor:
                     
             
                     License_text += text
-                print(License_text)
+                print("License text" , License_text)
                 img = img.copy()
                 print("X1", x1)
                 print("Y1", y1)
