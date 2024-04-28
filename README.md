@@ -5,6 +5,7 @@ This project uses FastAPI for backend services, PostgreSQL for the database, and
 ![Alt text](<Screenshot 2024-04-23 at 1.46.48 PM.png>)
 ![Alt text](<Screenshot 2024-04-23 at 1.50.19 PM.png>)
 
+![Alt text](<Screenshot 2024-04-28 at 2.19.37 PM.png>)
 
 ## Install the dependencies
 
@@ -36,8 +37,14 @@ python3 video.py
 ```
 
 
+
 ## Using Docker-Compose and CI/CD
 
+Install Docker-compose
+
+```bash
+brew install docker-compose
+```
 Build ther Docker-compose
 
 ```bash 

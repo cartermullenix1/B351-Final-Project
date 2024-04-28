@@ -7,3 +7,7 @@ python-dotenv
 easyocr
 Pillow
 python-multipart
+numpy
+pandas
+torch
+torchvision
