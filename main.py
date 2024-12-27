@@ -69,11 +69,12 @@ def get_db():
     finally:
         db.close()
  
+# FasterRCNN model
 #predictor = HelmetPredictor('tracker/model_weights.pth')
+        
+# YOLOv8 model
 predictor = HelmetPredictor("model/runs/detect/yolov8n_custom4/weights/best.pt", model_type="yolov8")
-#predictor = 
-#storage_client = storage.Client.from_service_account_json('path/to/your/service-account-file.json')
-#bucket_name = 'your-bucket-name'
+
 
 
 @app.post("/files/")
